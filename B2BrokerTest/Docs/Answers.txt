@@ -1,0 +1,50 @@
+﻿https://docs.google.com/document/d/1bvrMjA1sTxJwwVG0eufT9jsCri7jSRUGcUxvjAyDEgU/edit?usp=sharing
+
+1. What issue do asynchronous methods help to address? What is the difference between
+asynchronous and parallel execution?
+
+Asynchronous methods help us to optimize the waiting time. For example, the thread does not wait for the HDD to terminate.
+At this time, it performs another task/process. After the read is complete, it will return the task to the pool and continue working.
+For parallel execution, we need segmentation of our data, than we can calculate and aggregate, for example, to calculate the sum of each array.
+Asynchrony is not limited to this and can be used when we need a previous result.
+
+2. Are there any nuances or issues arising from the use of ThreadPool, TPL and async/await that you can describe based on your experience?
+
+It must be understood that none of these paradigms solves the problem of unoptimized code, in this case it can only give time for additional investigation.
+It can also make debugging more difficult.
+
+The ThreadPool has a limit on the number of threads and some tasks can block a thread. In SQL, we have a ready mechanism for stopping and detecting a lock release, but not in c#.
+And if we don't have thread-safe code, it can cause a lot of errors that are sometimes very hard to catch.
+
+Async/await can also have a deadlock where two tasks are waiting for each other to complete. Also, we do not have an infinite number of possible tasks,
+I've had experience where tasks simply can't be completed because they are waiting in the task pool for a very long time.
+There are also really deadlock issues. We need to be mindful of ConfigureAwait(false) if the library will be used in WF or similar applications.
+If we have a piece of synchronous code and call asynchronous code from it, problems are also possible, so it can be difficult to implement asynchronous code in legacy code.
+And you also need to be aware of the possibilities when several tasks can change one collection or something like that.
+
+I don't have much experience with TPL, but in my experience there are major problems with catching errors in one of the Parallel threads.
+(We do not have a ready-made exception handling mechanism and this is the main reason for my not-so-great love for this paradigm).
+
+3. Which approaches do you know to signal about an occurred event to another thread? Can you elaborate on their differences and specifics?
+
+I don't know much about these possibilities:
+Save some variables and use Interlocked. For example, this can help calculate some statistics or check progress.
+Add to some method lock, monitor or semaphore. In this case we can be sure that there we check logic in one thread and can change the status of this process or something similar.
+We can use concurrent collections. This can help when we need to add/update/check some object from a few threads/tasks. For example, create some cache.
+We can add some callback or action. But there we may have a callback hell situation.
+
+4. Can you describe your experience with applying common design and development principles and patterns? Which of them do you find most useful? Which tasks did you solve by following them and why did you choose them?
+
+The principles of SOLID are very important to me. Also, I very often work with some integrations / synchronization for these purposes, the Factory and Strategy patterns are useful to me.
+I often have few implementations of some parser and need to use some conditions with encapsulated logic (not have infinite "if" with 100+ conditions).
+Sometimes I need some Proxy, Bridge, Adapter patterns that can help me integrate external API and encapsulate part of details realization.
+A very rare case of the Singleton pattern. On modern systems, a single instance can be a bottleneck. 
+But sometimes we need control to access some services or features in one place.
+
+5. Can you list the mechanisms used to implement Dependency Injection and compare them in detail, with some examples from your own experience?
+
+I know three type in .Net Core:
+Transient - create every time you call;
+Scoped - Created once per scope. Often limited to one request. But there are also some hosted services or similar, for which we can create a separate area.
+Singleton - created only once.
+Transient can be a performance hazard if you use some complex logic or large amount of data to initialize it can add a lot of latency to the request. Most often this is the use of Scoped services. Singleton can be useful for some clients (when we need to be sure we only have one client) or service cache.
